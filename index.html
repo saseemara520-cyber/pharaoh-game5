@@ -2,22 +2,23 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pharaoh Educational Game</title>
+<title>Pharaoh Jump</title>
 
 <style>
 body{
   margin:0;
-  font-family: Arial, sans-serif;
+  font-family: Arial;
   background: linear-gradient(#d4af37,#6b4f1d);
   color:white;
   text-align:center;
 }
-h1{margin:20px}
+
+/* ===== القائمة ===== */
+#menu h1{margin:20px}
 
 .kings{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:15px;
   padding:20px;
 }
@@ -35,13 +36,14 @@ h1{margin:20px}
   border-radius:10px;
 }
 
+/* ===== اللعبة ===== */
 #game{display:none}
 
 #playArea{
   position:relative;
-  width:95%;
+  width:90%;
   max-width:700px;
-  height:320px;
+  height:300px;
   margin:10px auto;
   background:linear-gradient(#e8c872,#8b5a2b);
   border-radius:20px;
@@ -68,60 +70,75 @@ h1{margin:20px}
   white-space:nowrap;
 }
 
-#info{
-  font-size:20px;
-  margin-top:10px;
+/* ===== Game Over ===== */
+#gameOver{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,0.8);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  font-size:24px;
 }
 
 #controls{
-  display:flex;
-  justify-content:center;
-  gap:25px;
-  margin:15px 0 25px;
+  margin:15px;
 }
 #controls button{
-  font-size:26px;
-  padding:15px 22px;
+  font-size:24px;
+  padding:12px 20px;
+  margin:5px;
+  border-radius:12px;
   border:none;
-  border-radius:15px;
 }
 </style>
 </head>
 
 <body>
 
+<!-- ===== القائمة ===== -->
 <div id="menu">
   <h1>🏺 Choose the King</h1>
   <div class="kings" id="kings"></div>
 </div>
 
+<!-- ===== اللعبة ===== -->
 <div id="game">
-  <h1 id="kingTitle"></h1>
+  <h2 id="kingTitle"></h2>
+
   <div id="playArea">
     <div id="player"></div>
+
+    <div id="gameOver">
+      <p>🎉 Game Over</p>
+      <p id="finalScore"></p>
+      <button onclick="location.reload()">Play Again</button>
+    </div>
   </div>
-  <div id="info">Score: <span id="score">0</span></div>
+
+  <p>Score: <span id="score">0</span></p>
 
   <div id="controls">
-    <button id="left">⬅️</button>
-    <button id="jump">⬆️</button>
-    <button id="right">➡️</button>
+    <button onclick="moveLeft()">⬅️</button>
+    <button onclick="jump()">⬆️</button>
+    <button onclick="moveRight()">➡️</button>
   </div>
 </div>
 
 <script>
 /* ===== البيانات ===== */
 const kingsData={
-  "مينا":{img:"mena.jpg",works:["توحيد القطرين البحري والقبلي","بناء مدينة منف"]},
-  "منتحتب الثاني":{img:"mentuhotep2.jpg",works:["إعادة توحيد البلاد","إخضاع حكام الأقاليم"]},
-  "منتحات الأول":{img:"amenemhat1.jpg",works:["نقل العاصمة من طيبة إلى إثيت تاوي"]},
-  "سنوسرت الثالث":{img:"senusret3.jpg",works:["تشييد مبانٍ كثيرة","الاهتمام بالري والزراعة"]},
-  "أحمس":{img:"ahmose.jpg",works:["الانتصار على الهكسوس","إصلاحات داخلية"]},
-  "حتشبسوت":{img:"hatshepsut.jpg",works:["نشاط تجاري واسع إلى بلاد بونت"]},
-  "تحتمس الثالث":{img:"thutmose3.jpg",works:["تكوين إمبراطورية مصرية واسعة","معركة مجدو"]},
-  "إخناتون":{img:"akhenaten.jpg",works:["أول ثورة دينية","الدعوة لعبادة إله واحد"]},
-  "حورمحب":{img:"horemheb.jpg",works:["إصدار قوانين وتشريعات","القضاء على الفوضى"]},
-  "رمسيس الثاني":{img:"ramses2.jpg",works:["معركة قادش","أول معاهدة سلام"]}
+ "مينا":{img:"mena.jpg",works:["توحيد القطرين البحري والقبلي","بناء مدينة منف"]},
+ "منتحتب الثاني":{img:"mentuhotep2.jpg",works:["إعادة توحيد البلاد","إخضاع حكام الأقاليم"]},
+ "منتحات الأول":{img:"amenemhat1.jpg",works:["نقل العاصمة من طيبة إلى إثيت تاوي"]},
+ "سنوسرت الثالث":{img:"senusret3.jpg",works:["تشييد مبانٍ كثيرة","الاهتمام بالري والزراعة"]},
+ "أحمس":{img:"ahmose.jpg",works:["الانتصار على الهكسوس","إصلاحات داخلية"]},
+ "حتشبسوت":{img:"hatshepsut.jpg",works:["نشاط تجاري واسع إلى بلاد بونت"]},
+ "تحتمس الثالث":{img:"thutmose3.jpg",works:["تكوين إمبراطورية مصرية واسعة","معركة مجدو"]},
+ "إخناتون":{img:"akhenaten.jpg",works:["أول ثورة دينية","الدعوة لعبادة إله واحد"]},
+ "حورمحب":{img:"horemheb.jpg",works:["إصدار قوانين وتشريعات","القضاء على الفوضى"]},
+ "رمسيس الثاني":{img:"ramses2.jpg",works:["معركة قادش","أول معاهدة سلام"]}
 };
 
 /* ===== عناصر ===== */
@@ -130,42 +147,53 @@ const menu=document.getElementById("menu");
 const game=document.getElementById("game");
 const playArea=document.getElementById("playArea");
 const player=document.getElementById("player");
-const kingTitle=document.getElementById("kingTitle");
 const scoreEl=document.getElementById("score");
+const kingTitle=document.getElementById("kingTitle");
+const gameOver=document.getElementById("gameOver");
+const finalScore=document.getElementById("finalScore");
 
 /* ===== متغيرات ===== */
 let currentKing="";
 let score=0;
-let jumping=false;
 let playerX=60;
-const speed=14;
+let jumping=false;
+let questions=0;
+const maxQuestions=10;
 
 /* ===== إنشاء الملوك ===== */
-Object.keys(kingsData).forEach(king=>{
+Object.keys(kingsData).forEach(k=>{
   const div=document.createElement("div");
   div.className="king";
   div.innerHTML=`
-    <img src="images/${kingsData[king].img}">
-    <p>${king}</p>
+    <img src="images/${kingsData[k].img}">
+    <p>${k}</p>
   `;
-  div.onclick=()=>startGame(king);
+  div.onclick=()=>startGame(k);
   kingsDiv.appendChild(div);
 });
 
-function startGame(king){
-  currentKing=king;
+function startGame(k){
+  currentKing=k;
   score=0;
-  scoreEl.textContent=score;
+  questions=0;
+  scoreEl.textContent=0;
   menu.style.display="none";
   game.style.display="block";
-  kingTitle.textContent="Works of King " + king;
+  kingTitle.textContent="Works of King " + k;
   spawnWork();
 }
 
-/* ===== الأعمال ===== */
+/* ===== الأعمال (النط متحل نهائيًا) ===== */
 function spawnWork(){
+  if(questions>=maxQuestions){
+    gameOver.style.display="flex";
+    finalScore.textContent="Your Score: "+score;
+    return;
+  }
+  questions++;
+
   const allWorks=[];
-  Object.values(kingsData).forEach(k=>allWorks.push(...k.works));
+  Object.values(kingsData).forEach(v=>allWorks.push(...v.works));
   const text=allWorks[Math.floor(Math.random()*allWorks.length)];
 
   const work=document.createElement("div");
@@ -175,7 +203,6 @@ function spawnWork(){
   playArea.appendChild(work);
 
   let x=playArea.offsetWidth;
-  let ignored=false; // ⭐ الحل هنا
 
   const move=setInterval(()=>{
     x-=3;
@@ -184,49 +211,47 @@ function spawnWork(){
     const w=work.getBoundingClientRect();
     const p=player.getBoundingClientRect();
 
-    /* ⭐ لو اللاعب ناط والسؤال عدّى تحته → تجاهل */
-    if(jumping && !ignored && w.right < p.left){
-      ignored=true;
+    if(jumping){
+      if(w.right<p.left){
+        clearInterval(move);
+        work.remove();
+      }
+      return;
     }
 
-    /* ⭐ تصادم فقط لو مش متجاهَل */
-    if(!ignored &&
-       !jumping &&
-       w.left<p.right &&
-       w.right>p.left &&
-       w.bottom>p.top){
-
+    if(w.left<p.right && w.right>p.left){
       clearInterval(move);
       work.remove();
-
-      if(kingsData[currentKing].works.includes(text)) score++;
-      else score--;
-
+      score += kingsData[currentKing].works.includes(text)?1:-1;
       scoreEl.textContent=score;
     }
 
-    if(x<-350){
+    if(x<-300){
       clearInterval(move);
       work.remove();
     }
   },20);
 
-  setTimeout(spawnWork,2600);
+  setTimeout(spawnWork,2500);
 }
 
 /* ===== التحكم ===== */
-function moveLeft(){playerX-=speed}
-function moveRight(){playerX+=speed}
-
+function moveLeft(){
+  playerX=Math.max(0,playerX-15);
+  player.style.left=playerX+"px";
+}
+function moveRight(){
+  playerX=Math.min(playArea.offsetWidth-40,playerX+15);
+  player.style.left=playerX+"px";
+}
 function jump(){
   if(jumping) return;
   jumping=true;
-
   let y=20;
   const up=setInterval(()=>{
     y+=6;
     player.style.bottom=y+"px";
-    if(y>=140){
+    if(y>=130){
       clearInterval(up);
       const down=setInterval(()=>{
         y-=6;
@@ -239,26 +264,10 @@ function jump(){
     }
   },20);
 }
-
-window.addEventListener("keydown",e=>{
-  if(e.code==="ArrowLeft") moveLeft();
-  if(e.code==="ArrowRight") moveRight();
-  if(e.code==="Space") jump();
-
-  const maxX=playArea.offsetWidth-player.offsetWidth;
-  playerX=Math.max(0,Math.min(playerX,maxX));
-  player.style.left=playerX+"px";
-});
-
-/* موبايل */
-left.ontouchstart=moveLeft;
-right.ontouchstart=moveRight;
-jump.ontouchstart=jump;
 </script>
 
 </body>
 </html>
-
 
 
 
