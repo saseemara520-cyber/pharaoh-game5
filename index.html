@@ -13,7 +13,7 @@ body{
   text-align:center;
 }
 
-/* ===== القائمة ===== */
+/* القائمة */
 #menu h1{margin:20px}
 
 .kings{
@@ -36,7 +36,7 @@ body{
   border-radius:10px;
 }
 
-/* ===== اللعبة ===== */
+/* اللعبة */
 #game{display:none}
 
 #playArea{
@@ -50,44 +50,53 @@ body{
   overflow:hidden;
 }
 
+/* اللاعب */
 #player{
   position:absolute;
   bottom:20px;
   left:60px;
-  width:40px;
-  height:60px;
-  background:#222;
-  border-radius:8px;
+  width:45px;
+  height:45px;
+  background:#ffd000;
+  border-radius:50%;
+  box-shadow:0 0 10px #000 inset;
 }
 
+/* الأعمال */
 .work{
   position:absolute;
-  bottom:20px;
+  bottom:40px;      /* 🔼 رفع الصندوق لأعلى */
   background:#3b2a1a;
-  padding:10px 14px;
+  padding:6px 10px; /* 🔽 تصغير الارتفاع */
   border-radius:12px;
-  font-size:16px;
+  font-size:15px;
   white-space:nowrap;
 }
 
-/* ===== Game Over ===== */
+/* شاشة النهاية */
 #gameOver{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,0.8);
+  background:rgba(0,0,0,0.85);
   display:none;
   align-items:center;
   justify-content:center;
   flex-direction:column;
-  font-size:24px;
+}
+#gameOver h2{
+  margin:6px;
+}
+#gameOver button{
+  padding:10px 16px;
+  font-size:18px;
+  border-radius:12px;
+  border:none;
 }
 
-#controls{
-  margin:15px;
-}
+/* أزرار الموبايل */
 #controls button{
-  font-size:24px;
-  padding:12px 20px;
+  font-size:22px;
+  padding:10px 16px;
   margin:5px;
   border-radius:12px;
   border:none;
@@ -97,21 +106,20 @@ body{
 
 <body>
 
-<!-- ===== القائمة ===== -->
 <div id="menu">
   <h1>🏺 Choose the King</h1>
   <div class="kings" id="kings"></div>
 </div>
 
-<!-- ===== اللعبة ===== -->
 <div id="game">
+
   <h2 id="kingTitle"></h2>
 
   <div id="playArea">
     <div id="player"></div>
 
     <div id="gameOver">
-      <p>🎉 Game Over</p>
+      <h2>🎮 Game Over</h2>
       <p id="finalScore"></p>
       <button onclick="location.reload()">Play Again</button>
     </div>
@@ -127,7 +135,7 @@ body{
 </div>
 
 <script>
-/* ===== البيانات ===== */
+/* ================== البيانات ================== */
 const kingsData={
  "مينا":{img:"mena.jpg",works:["توحيد القطرين البحري والقبلي","بناء مدينة منف"]},
  "منتحتب الثاني":{img:"mentuhotep2.jpg",works:["إعادة توحيد البلاد","إخضاع حكام الأقاليم"]},
@@ -141,7 +149,16 @@ const kingsData={
  "رمسيس الثاني":{img:"ramses2.jpg",works:["معركة قادش","أول معاهدة سلام"]}
 };
 
-/* ===== عناصر ===== */
+/* ================== الأصوات ================== */
+const jumpSound   = new Audio("sounds/jump.mp3");
+const correctSound= new Audio("sounds/correct.mp3");
+const wrongSound  = new Audio("sounds/wrong.mp3");
+
+jumpSound.preload   ="auto";
+correctSound.preload="auto";
+wrongSound.preload  ="auto";
+
+/* ================== عناصر ================== */
 const kingsDiv=document.getElementById("kings");
 const menu=document.getElementById("menu");
 const game=document.getElementById("game");
@@ -152,15 +169,16 @@ const kingTitle=document.getElementById("kingTitle");
 const gameOver=document.getElementById("gameOver");
 const finalScore=document.getElementById("finalScore");
 
-/* ===== متغيرات ===== */
+/* ================== متغيرات ================== */
 let currentKing="";
 let score=0;
 let playerX=60;
 let jumping=false;
+let canCollide=true;
 let questions=0;
 const maxQuestions=10;
 
-/* ===== إنشاء الملوك ===== */
+/* ================== إنشاء الملوك ================== */
 Object.keys(kingsData).forEach(k=>{
   const div=document.createElement("div");
   div.className="king";
@@ -183,13 +201,15 @@ function startGame(k){
   spawnWork();
 }
 
-/* ===== الأعمال (النط متحل نهائيًا) ===== */
+/* ================== توليد الأعمال ================== */
 function spawnWork(){
+
   if(questions>=maxQuestions){
     gameOver.style.display="flex";
-    finalScore.textContent="Your Score: "+score;
+    finalScore.textContent="Your Score: " + score;
     return;
   }
+
   questions++;
 
   const allWorks=[];
@@ -203,26 +223,49 @@ function spawnWork(){
   playArea.appendChild(work);
 
   let x=playArea.offsetWidth;
+  let ignored=false;
 
   const move=setInterval(()=>{
+
     x-=3;
     work.style.left=x+"px";
 
     const w=work.getBoundingClientRect();
     const p=player.getBoundingClientRect();
 
+    /* ⭐ أثناء القفز = لا يوجد أي تصادم */
     if(jumping){
-      if(w.right<p.left){
-        clearInterval(move);
-        work.remove();
+      canCollide=false;
+
+      /* لو السؤال عدى اللاعب خلاص يتم تجاهله */
+      if(w.right < p.left){
+        ignored=true;
       }
       return;
+    } else {
+      canCollide=true;
     }
 
-    if(w.left<p.right && w.right>p.left){
+    /* ⭐ التصادم الصحيح */
+    if(canCollide &&
+       !ignored &&
+       w.left<p.right &&
+       w.right>p.left &&
+       w.bottom>p.top){
+
       clearInterval(move);
       work.remove();
-      score += kingsData[currentKing].works.includes(text)?1:-1;
+
+      if(kingsData[currentKing].works.includes(text)){
+        score++;
+        correctSound.currentTime=0;
+        correctSound.play();
+      } else {
+        score--;
+        wrongSound.currentTime=0;
+        wrongSound.play();
+      }
+
       scoreEl.textContent=score;
     }
 
@@ -230,45 +273,69 @@ function spawnWork(){
       clearInterval(move);
       work.remove();
     }
+
   },20);
 
-  setTimeout(spawnWork,2500);
+  setTimeout(spawnWork,2300);
 }
 
-/* ===== التحكم ===== */
+/* ================== الحركة ================== */
 function moveLeft(){
   playerX=Math.max(0,playerX-15);
   player.style.left=playerX+"px";
 }
 function moveRight(){
-  playerX=Math.min(playArea.offsetWidth-40,playerX+15);
+  playerX=Math.min(playArea.offsetWidth-45,playerX+15);
   player.style.left=playerX+"px";
 }
+
+/* أسهم الكيبورد */
+window.addEventListener("keydown",e=>{
+  if(e.code==="ArrowLeft")  moveLeft();
+  if(e.code==="ArrowRight") moveRight();
+  if(e.code==="Space"||e.code==="ArrowUp") jump();
+});
+
+/* ================== القفز ================== */
 function jump(){
+
   if(jumping) return;
+
   jumping=true;
+  canCollide=false;
+
+  jumpSound.currentTime=0;
+  jumpSound.play();
+
   let y=20;
+
   const up=setInterval(()=>{
-    y+=6;
+
+    y+=9;                     /* أعلى */
     player.style.bottom=y+"px";
-    if(y>=130){
+
+    if(y>=190){              /* ارتفاع كبير لتفادي الصندوق */
       clearInterval(up);
+
       const down=setInterval(()=>{
-        y-=6;
+        y-=9;
         player.style.bottom=y+"px";
+
         if(y<=20){
           clearInterval(down);
           jumping=false;
+          setTimeout(()=>canCollide=true,120);
         }
-      },20);
+
+      },18);
     }
-  },20);
+
+  },18);
 }
 </script>
 
 </body>
 </html>
-
 
 
 
